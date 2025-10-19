@@ -14,7 +14,6 @@ export default defineConfig({
     }),
   ],
   build: {
-    copyPublicDir: false,
     lib: {
       entry: path.resolve(__dirname, 'lib/index.ts'),
       name: 'MivaBDN',
