@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 export interface MivaBDNOptions {
   appId: string;
   containerId: string;
@@ -31,49 +32,41 @@ export default class MivaBDN {
 
   init() {
     if (!this.appId) {
-      throw new Error('MivaBDN: appId is required for initialization.');
+      throw new Error('[MivaBDN:Host] appId is required for initialization.');
     }
     if (!this.mivaUrl) {
-      throw new Error('MivaBDN: mivaUrl is required for initialization.');
+      throw new Error('[MivaBDN:Host] mivaUrl is required for initialization.');
     }
     if (!this.containerId) {
-      throw new Error('MivaBDN: containerId is required for initialization.');
+      throw new Error('[MivaBDN:Host] containerId is required for initialization.');
     }
 
     const container = document.getElementById(this.containerId);
     if (!container) {
-      throw new Error(`MivaBDN: Container element with id "${this.containerId}" not found.`);
+      throw new Error(`[MivaBDN:Host] Container element with id "${this.containerId}" not found.`);
     }
 
     this.iframeEl = this.createIframe(container);
     window.addEventListener('message', this.messageHandler);
 
-    if (this.debug) {
-      console.log('MivaBDN: Initialized and started listening for messages.');
-    }
+    if (this.debug) console.log('[MivaBDN:Host] Initialized and started listening for messages.');
   }
 
   destroy() {
     window.removeEventListener('message', this.messageHandler);
 
-    if (this.debug) {
-      console.log('MivaBDN: Destroyed and stopped listening for messages.');
-    }
+    if (this.debug) console.log('[MivaBDN:Host] Destroyed and stopped listening for messages.');
   }
 
   postMessage(payload: unknown) {
     if (!this.iframeEl || !this.iframeEl.contentWindow) {
-      if (this.debug) {
-        console.warn('MivaBDN: Failed to post message — iframe or contentWindow not found.');
-      }
+      if (this.debug) console.warn('[MivaBDN:Host] Failed to post message — iframe or contentWindow not found.');
       return;
     }
 
     this.iframeEl.contentWindow.postMessage(payload, this.origin);
 
-    if (this.debug) {
-      console.log(`MivaBDN: Posted message to ${this.origin}: ${JSON.stringify(payload)}.`);
-    }
+    if (this.debug) console.log(`[MivaBDN:Host] Posted message to ${this.origin}:`, payload);
   }
 
   private createIframe(container: HTMLElement): HTMLIFrameElement {
@@ -82,42 +75,32 @@ export default class MivaBDN {
 
     const created = document.createElement('iframe');
     const url = new URL(this.mivaUrl);
+    url.searchParams.set('origin', window.location.origin);
     url.searchParams.set('appId', this.appId);
+    url.searchParams.set('debug', this.debug ? '1' : '0');
     created.src = url.toString();
     container.appendChild(created);
 
-    if (this.debug) {
-      console.log(`MivaBDN: Created iframe with src "${created.src}".`);
-    }
+    if (this.debug) console.log(`[MivaBDN:Host] Created iframe with src "${created.src}".`);
 
     return created;
   }
 
   private handleMessage(event: MessageEvent) {
-    if (event.origin !== this.origin) return;
+    const { data, origin } = event;
+    if (origin !== this.origin) return;
 
-    const data = event.data;
+    if (this.debug) console.log(`[MivaBDN:Host] Received post message from ${origin}:`, data);
 
     switch (data?.status) {
       case 'ready':
-        if (this.debug) {
-          console.log('MivaBDN: Received "ready" message from iframe.');
-        }
         this.onReady(data, this);
         this.postMessage({ status: 'acknowledged' });
         break;
-
       case 'confirmed':
-        if (this.debug) {
-          console.log('MivaBDN: Received "confirmed" message from iframe.');
-        }
         this.onConfirmed(data, this);
         break;
-
       default:
-        if (this.debug) {
-          console.warn(`MivaBDN: Received unknown message: ${JSON.stringify(data)}.`);
-        }
         break;
     }
   }
