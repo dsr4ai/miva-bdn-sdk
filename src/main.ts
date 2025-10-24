@@ -1,11 +1,15 @@
-import { MivaBDN } from '../lib';
 import './style.css';
+import { MivaBDN } from '../lib';
 
 const mivaBDN = new MivaBDN({
-  appId: 'aebd41ea-6504-4e9e-9756-e6d79b04abc7',
-  containerId: 'app',
-  mivaUrl: 'http://localhost:3000',
+  appId: import.meta.env.VITE_APP_ID as string,
+  target: '#app',
+  baseUrl: 'https://staging.miva.bookai.com/',
   debug: true,
 });
 
-mivaBDN.init();
+try {
+  mivaBDN.init();
+} catch (error) {
+  console.error(error);
+}
