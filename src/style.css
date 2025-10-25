@@ -2,6 +2,10 @@ body {
   margin: 0;
 }
 
+header {
+  text-align: center;
+}
+
 iframe {
   border: none;
   height: 800px;
