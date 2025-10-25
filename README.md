@@ -31,7 +31,6 @@ After importing, you can initialize and use the SDK as follows:
 ```js
 const miva = new MivaBDN({
   appId: 'your-app-id',
-  baseUrl: 'https://miva.bookai.com',
   target: '#app', // Specifies the DOM element or CSS selector for mounting the iframe
   debug: true, // Enables verbose logging for debugging
 });

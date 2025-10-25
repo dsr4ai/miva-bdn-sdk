@@ -13,7 +13,7 @@ export interface MivaBDNOptions {
   /**
    * The base URL for the MivaBDN application to be loaded in the iframe.
    */
-  baseUrl: string;
+  baseUrl?: string;
 
   /**
    * Enables verbose logging to the console for debugging.
@@ -76,8 +76,14 @@ export default class MivaBDN {
    * @param options - The configuration options for this instance.
    */
   constructor(options: MivaBDNOptions) {
+    if (!options.appId) {
+      throw new MivaBDNError('appId is required for initialization.');
+    }
+    if (!options.target) {
+      throw new MivaBDNError('target is required for initialization.');
+    }
     this.appId = options.appId;
-    this.baseUrl = options.baseUrl;
+    this.baseUrl = options.baseUrl ?? 'https://miva.bookai.com';
     this.debug = options.debug ?? false;
     this.messageHandler = this.handleMessage.bind(this);
     this.onConfirmed = options.onConfirmed ?? (() => {});
@@ -94,23 +100,13 @@ export default class MivaBDN {
    * @throws {MivaBDNError} If required options (appId, baseUrl, target) are missing.
    */
   init() {
-    if (!this.appId) {
-      throw new MivaBDNError('appId is required for initialization.');
-    }
-    if (!this.baseUrl) {
-      throw new MivaBDNError('baseUrl is required for initialization.');
-    }
-    if (!this.target) {
-      throw new MivaBDNError('target is required for initialization.');
-    }
-
     const container = this.resolveTarget(this.target);
 
     this.iframeEl = this.createIframe(container);
 
     window.addEventListener('message', this.messageHandler);
 
-    if (this.debug) console.log('[MivaBDN:Host] Initialized and started listening for messages.');
+    this.printLog('Initialized iframe and added message listener.');
   }
 
   /**
@@ -126,7 +122,7 @@ export default class MivaBDN {
 
     this.iframeEl = null;
 
-    if (this.debug) console.log('[MivaBDN:Host] Destroyed and removed iframe.');
+    this.printLog('Destroyed iframe and removed message listener.');
   }
 
   /**
@@ -142,7 +138,7 @@ export default class MivaBDN {
 
     this.iframeEl.contentWindow.postMessage(payload, this.origin);
 
-    if (this.debug) console.log(`[MivaBDN:Host] Posted message to ${this.origin}:`, payload);
+    this.printLog(`Posted message to ${this.origin}:`, payload);
   }
 
   /**
@@ -194,7 +190,7 @@ export default class MivaBDN {
     created.src = url.toString();
     container.appendChild(created);
 
-    if (this.debug) console.log(`[MivaBDN:Host] Created iframe with src "${created.src}".`);
+    this.printLog(`Created iframe with src "${created.src}".`);
 
     return created;
   }
@@ -210,10 +206,13 @@ export default class MivaBDN {
   private handleMessage(event: MessageEvent) {
     const { data, origin } = event;
 
-    // Security check: Only accept messages from the trusted iframe origin
-    if (origin !== this.origin) return;
+    // Only accept messages from the trusted iframe origin
+    if (origin !== this.origin) {
+      this.printLog(`Received post message from untrusted origin ${origin} was ignored.`);
+      return;
+    }
 
-    if (this.debug) console.log(`[MivaBDN:Host] Received post message from ${origin}:`, data);
+    this.printLog(`Received post message from ${origin}:`, data);
 
     switch (data?.status) {
       case 'ready':
@@ -227,6 +226,12 @@ export default class MivaBDN {
       default:
         // Ignore unknown message types
         break;
+    }
+  }
+
+  private printLog(message: string, ...args: unknown[]) {
+    if (this.debug) {
+      console.log(`[MivaBDN:Iframe] ${message}`, ...args);
     }
   }
 }
