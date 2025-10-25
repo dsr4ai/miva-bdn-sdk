@@ -1,6 +1,13 @@
 /* eslint-disable no-console */
 import MivaBDNError from './MivaBDNError';
 
+const ALLOWED_ORIGINS = [
+  'https://miva.bookai.com',
+  'https://staging.miva.bookai.com',
+  'https://dev.miva.bookai.com',
+  'http://localhost:3000',
+];
+
 /**
  * Configuration options for the MivaBDN instance.
  */
@@ -61,15 +68,15 @@ export interface MivaBDNOptions {
  * ```
  */
 export default class MivaBDN {
-  private appId: string;
-  private baseUrl: string;
-  private debug: boolean;
+  private appId: string = '';
+  private baseUrl: string = '';
+  private debug: boolean = false;
   private iframeEl: HTMLIFrameElement | null = null;
-  private messageHandler: (ev: MessageEvent) => void;
-  private onConfirmed: (data: unknown, instance: MivaBDN) => void;
-  private onReady: (data: unknown, instance: MivaBDN) => void;
-  private origin: string;
-  private target: HTMLElement | string;
+  private messageHandler: (ev: MessageEvent) => void = () => {};
+  private onConfirmed: (data: unknown, instance: MivaBDN) => void = () => {};
+  private onReady: (data: unknown, instance: MivaBDN) => void = () => {};
+  private origin: string = '';
+  private options: MivaBDNOptions;
 
   /**
    * Creates an instance of MivaBDN.
@@ -82,14 +89,7 @@ export default class MivaBDN {
     if (!options.target) {
       throw new MivaBDNError('target is required for initialization.');
     }
-    this.appId = options.appId;
-    this.baseUrl = options.baseUrl ?? 'https://miva.bookai.com';
-    this.debug = options.debug ?? false;
-    this.messageHandler = this.handleMessage.bind(this);
-    this.onConfirmed = options.onConfirmed ?? (() => {});
-    this.onReady = options.onReady ?? (() => {});
-    this.origin = new URL(this.baseUrl).origin;
-    this.target = options.target;
+    this.options = options;
   }
 
   /**
@@ -100,7 +100,15 @@ export default class MivaBDN {
    * @throws {MivaBDNError} If required options (appId, baseUrl, target) are missing.
    */
   init() {
-    const container = this.resolveTarget(this.target);
+    this.appId = this.options.appId;
+    this.baseUrl = this.resolveBaseUrl(this.options.baseUrl);
+    this.debug = this.options.debug ?? false;
+    this.messageHandler = this.handleMessage.bind(this);
+    this.onConfirmed = this.options.onConfirmed ?? (() => {});
+    this.onReady = this.options.onReady ?? (() => {});
+    this.origin = new URL(this.baseUrl).origin;
+
+    const container = this.resolveTarget(this.options.target);
 
     this.iframeEl = this.createIframe(container);
 
@@ -139,6 +147,17 @@ export default class MivaBDN {
     this.iframeEl.contentWindow.postMessage(payload, this.origin);
 
     this.printLog(`Posted message to ${this.origin}:`, payload);
+  }
+
+  private resolveBaseUrl(url?: string): string {
+    const [PROD, STAGING, DEV] = ALLOWED_ORIGINS;
+    if (!url) {
+      return PROD;
+    }
+    if (ALLOWED_ORIGINS.includes(url)) {
+      return url;
+    }
+    throw new MivaBDNError(`Invalid baseUrl. Must be one of: ${PROD}, ${STAGING}, ${DEV}`);
   }
 
   /**
@@ -180,14 +199,14 @@ export default class MivaBDN {
     container.innerHTML = '';
 
     const created = document.createElement('iframe');
-    const url = new URL(this.baseUrl);
 
-    // Append required parameters for the iframe application
+    const url = new URL(this.baseUrl);
     url.searchParams.set('origin', window.location.origin);
     url.searchParams.set('appId', this.appId);
     url.searchParams.set('debug', this.debug ? '1' : '0');
 
     created.src = url.toString();
+
     container.appendChild(created);
 
     this.printLog(`Created iframe with src "${created.src}".`);
