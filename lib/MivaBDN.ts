@@ -154,7 +154,8 @@ export default class MivaBDN {
     if (!url) {
       return PROD;
     }
-    if (ALLOWED_ORIGINS.includes(url)) {
+    const { origin } = new URL(url);
+    if (ALLOWED_ORIGINS.includes(origin)) {
       return url;
     }
     throw new MivaBDNError(`Invalid baseUrl. Must be one of: ${PROD}, ${STAGING}, ${DEV}`);
