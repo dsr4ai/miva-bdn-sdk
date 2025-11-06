@@ -1,6 +1,6 @@
 # MivaBDN SDK
 
-MivaBDN SDK makes it easy to embed the Miva BDN iframe into your web application. It handles iframe creation, secure postMessage communication, and event routing between your host application and the embedded iframe.
+MivaBDN SDK provides an easy way to embed the **Miva BDN iframe** in a web application.
 
 ## Installation
 
@@ -20,7 +20,7 @@ import MivaBDN from '@dsr4ai/miva-bdn-sdk';
 
 ### Using with UMD Modules
 
-Alternatively, if you're using UMD modules, include the script in your HTML file and use it in your code:
+Alternatively, if you're using UMD modules, include the script in your HTML file:
 
 ```html
 <script src="https://unpkg.com/@dsr4ai/miva-bdn-sdk/dist/index.umd.js"></script>
@@ -30,15 +30,15 @@ After importing, you can initialize and use the SDK as follows:
 
 ```js
 const miva = new MivaBDN({
-  appId: 'your-app-id',
-  target: '#app', // Specifies the DOM element or CSS selector for mounting the iframe
-  debug: true, // Enables verbose logging for debugging
+  appId: 'your-app-id', // your Miva BDN app ID
+  target: '#app',       // container selector
+  debug: true           // optional debug mode
 });
 
-// Initializes the MivaBDN instance
+// Initializes the iframe and starts message listening
 miva.init();
 
-// Destroys the MivaBDN instance and removes the iframe when no longer needed
+// Removes the iframe and event listeners when no longer needed
 // miva.destroy();
 ```
 
@@ -46,26 +46,26 @@ miva.init();
 
 ### `new MivaBDN(options: MivaBDNOptions)`
 
-Creates a new MivaBDN instance.
+Creates a new `MivaBDN` instance that manages the iframe.
 
 #### Options
 
 Property | Type | Description
 ---|---|---
-`appId` | `string` | The unique application identifier.
-`baseUrl` | `string` | The base URL for the MivaBDN application to be loaded in the iframe.
-`debug` | `boolean` | Enables verbose logging to the console for debugging.
-`onConfirmed` | `(data: unknown, instance: MivaBDN) => void` | Callback function triggered when the iframe application signals a `confirmed` event.
-`onReady` | `(data: unknown, instance: MivaBDN) => void` | Callback function triggered when the iframe application signals a `ready` event.
-`target` | `HTMLElement \| string` | The DOM element or CSS selector string identifying where the MivaBDN iframe will be mounted.
+`appId` | `string` | Unique application identifier.
+`baseUrl` | `string` | Base URL of the Miva BDN loaded in the iframe.
+`debug` | `boolean` | Enables verbose logging.
+`onConfirmed` | `(data: unknown, instance: MivaBDN) => void` | Called when the iframe signals a `confirmed` event.
+`onReady` | `(data: unknown, instance: MivaBDN) => void` | Called when the iframe signals a `ready` event.
+`target` | `HTMLElement \| string` | DOM element or CSS selector where the iframe is mounted.
 
 ### Methods
 
-- `init(): void`
-  Initializes the `MivaBDN` instance, creates the iframe, and starts listening for messages.
+- `init(): void`  
+  Initializes the iframe and starts message listening.
 
-- `destroy(): void`
-  Cleans up the  `MivaBDN` instance by removing the iframe and event listeners.
+- `destroy(): void`  
+  Removes the iframe and event listeners when no longer needed.
 
 ## Error Handling
 
