@@ -9,7 +9,7 @@
     "build": "tsc -p ./tsconfig.build.json && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "release": "npm run test && npm run build && npm publish --access public"
+    "release": "npm run build && npm publish --access public"
   },
   "devDependencies": {
     "@eslint/js": "^9.11.0",

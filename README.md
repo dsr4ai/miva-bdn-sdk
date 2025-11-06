@@ -42,6 +42,10 @@ miva.init();
 // miva.destroy();
 ```
 
+### Manual Integration
+
+For manual integration, refer to the implementation in [`src/manual.js`](src/manual.js).
+
 ## API
 
 ### `new MivaBDN(options: MivaBDNOptions)`
