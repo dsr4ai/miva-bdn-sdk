@@ -1,5 +1,5 @@
 import './style.css';
-import { MivaBDN } from '../lib';
+import MivaBDN from '../lib';
 
 const mivaBDN = new MivaBDN({
   appId: import.meta.env.VITE_MIVA_BDN_APP_ID as string,

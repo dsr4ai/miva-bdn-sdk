@@ -2,9 +2,9 @@ import './style.css';
 
 const initMivaBDN = ({
   appId,
-  target,
   baseUrl = 'https://miva.bookai.com',
   debug = false,
+  target,
 }: {
   appId: string;
   baseUrl?: string;
@@ -47,13 +47,9 @@ const initMivaBDN = ({
   });
 };
 
-// Initialize Miva BDN manually by setting enabled to true
-const enabled = false;
-if (enabled) {
-  initMivaBDN({
-    baseUrl: 'http://localhost:3000',
-    appId: 'f5baa85a-c8cd-47ba-ad1c-f712d84090b6',
-    target: '#app',
-    debug: true,
-  });
-}
+initMivaBDN({
+  appId: 'aebd41ea-6504-4e9e-9756-e6d79b04abc7',
+  baseUrl: 'https://staging.miva.bookai.com',
+  debug: true,
+  target: '#app',
+});
