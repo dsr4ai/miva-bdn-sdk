@@ -29,22 +29,41 @@ Alternatively, if you're using UMD modules, include the script in your HTML file
 After importing, you can initialize and use the SDK as follows:
 
 ```js
-const miva = new MivaBDN({
+const mivaBDN = new MivaBDN({
   appId: 'your-app-id', // your Miva BDN app ID
   target: '#app',       // container selector
   debug: true           // optional debug mode
 });
 
 // Initializes the iframe and starts message listening
-miva.init();
+mivaBDN.init();
 
 // Removes the iframe and event listeners when no longer needed
-// miva.destroy();
+// mivaBDN.destroy();
 ```
 
 ### Manual Integration
 
 For manual integration, refer to the implementation in [`src/manual.js`](src/manual.js).
+
+## Usage
+
+### Loading a Single Book
+
+You can load a single book in the Miva BDN iframe by specifying the `path` and `sourceId` when initializing the `MivaBDN` instance.
+
+```js
+const mivaBDN = new MivaBDN({
+  appId: 'your-app-id',    // your Miva BDN app ID
+  target: '#app',          // container selector
+  debug: true              // optional debug mode
+  path: '/library',        // Path inside the iframe to load the book
+  sourceId: 'source-id', // ID of the book to load
+});
+
+// Initializes the iframe and starts message listening
+mivaBDN.init();
+```
 
 ## API
 

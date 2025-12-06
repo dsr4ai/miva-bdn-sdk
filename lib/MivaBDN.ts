@@ -43,6 +43,18 @@ export interface MivaBDNOptions {
   onReady?: (data: unknown, instance: MivaBDN) => void;
 
   /**
+   * The relative path to be appended to `baseUrl` when constructing the iframe URL.
+   * This value should not include protocol or hostname.
+   */
+  path?: string;
+
+  /**
+   * The identifier(s) provided to the Miva application as content source metadata.
+   * Can be a single ID string or an array for multiple sources.
+   */
+  sourceId?: string | string[];
+
+  /**
    * The DOM element or CSS selector string identifying where the
    * MivaBDN iframe will be mounted.
    */
@@ -77,6 +89,8 @@ export default class MivaBDN {
   private onReady: (data: unknown, instance: MivaBDN) => void = () => {};
   private origin: string = '';
   private options: MivaBDNOptions;
+  private path: string = '';
+  private sourceId: string = '';
 
   /**
    * Creates an instance of MivaBDN.
@@ -107,6 +121,8 @@ export default class MivaBDN {
     this.onConfirmed = this.options.onConfirmed ?? (() => {});
     this.onReady = this.options.onReady ?? (() => {});
     this.origin = new URL(this.baseUrl).origin;
+    this.path = this.options.path ?? '';
+    this.sourceId = this.resolveSourceId(this.options.sourceId);
 
     const container = this.resolveTarget(this.options.target);
 
@@ -149,6 +165,12 @@ export default class MivaBDN {
     this.printLog(`Posted message to ${this.origin}:`, payload);
   }
 
+  /**
+   * Resolves the provided base URL, validating it against allowed origins.
+   * @param url - The base URL to validate and resolve.
+   * @returns The resolved base URL.
+   * @throws {MivaBDNError} If the URL is not in the list of allowed origins.
+   */
   private resolveBaseUrl(url?: string): string {
     const [PROD, STAGING, DEV] = ALLOWED_ORIGINS;
     if (!url) {
@@ -159,6 +181,17 @@ export default class MivaBDN {
       return url;
     }
     throw new MivaBDNError(`Invalid baseUrl. Must be one of: ${PROD}, ${STAGING}, ${DEV}`);
+  }
+
+  /**
+   * Resolves the `sourceId` option into a single comma-separated string.
+   * @param sourceId - The source identifier(s) to resolve. Can be a string or an array of strings.
+   * @returns The resolved source ID string, or an empty string if undefined.
+   */
+  private resolveSourceId(sourceId?: string | string[]): string {
+    if (!sourceId) return '';
+    if (typeof sourceId === 'string') return sourceId;
+    return sourceId.join(',');
   }
 
   /**
@@ -201,10 +234,11 @@ export default class MivaBDN {
 
     const created = document.createElement('iframe');
 
-    const url = new URL(this.baseUrl);
+    const url = new URL(this.path, this.baseUrl);
     url.searchParams.set('origin', window.location.origin);
     url.searchParams.set('appId', this.appId);
     url.searchParams.set('debug', this.debug ? '1' : '0');
+    url.searchParams.set('sourceId', this.sourceId);
 
     created.src = url.toString();
 
