@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import { SourceScope } from './enums';
 import MivaBDNError from './MivaBDNError';
 
 const ALLOWED_ORIGINS = [
@@ -55,6 +56,13 @@ export interface MivaBDNOptions {
   sourceId?: string | string[];
 
   /**
+   * Controls which source scopes are loaded by the Miva application.
+   *
+   * @default SourceScope.Public
+   */
+  sourceScope?: SourceScope;
+
+  /**
    * The DOM element or CSS selector string identifying where the
    * MivaBDN iframe will be mounted.
    */
@@ -91,6 +99,7 @@ export default class MivaBDN {
   private options: MivaBDNOptions;
   private path: string = '';
   private sourceId: string = '';
+  private sourceScope: string = '';
 
   /**
    * Creates an instance of MivaBDN.
@@ -123,6 +132,7 @@ export default class MivaBDN {
     this.origin = new URL(this.baseUrl).origin;
     this.path = this.options.path ?? '';
     this.sourceId = this.resolveSourceId(this.options.sourceId);
+    this.sourceScope = this.options.sourceScope ?? SourceScope.Public;
 
     const container = this.resolveTarget(this.options.target);
 
@@ -239,6 +249,7 @@ export default class MivaBDN {
     url.searchParams.set('appId', this.appId);
     url.searchParams.set('debug', this.debug ? '1' : '0');
     url.searchParams.set('sourceId', this.sourceId);
+    url.searchParams.set('sourceScope', this.sourceScope);
 
     created.src = url.toString();
 
