@@ -4,11 +4,13 @@ const initMivaBDN = ({
   appId,
   baseUrl = 'https://miva.bookai.com',
   debug = false,
+  locale,
   target,
 }: {
   appId: string;
   baseUrl?: string;
   debug?: boolean;
+  locale?: string;
   target: string;
 }) => {
   const container = document.querySelector<HTMLElement>(target);
@@ -19,7 +21,12 @@ const initMivaBDN = ({
 
   const url = new URL(baseUrl);
   url.searchParams.set('appId', appId);
-  url.searchParams.set('debug', debug ? '123' : '0');
+  if (debug) {
+    url.searchParams.set('debug', String(debug));
+  }
+  if (locale) {
+    url.searchParams.set('locale', locale);
+  }
 
   const iframe = document.createElement('iframe');
   iframe.src = url.toString();
@@ -52,4 +59,5 @@ initMivaBDN({
   baseUrl: 'https://staging.miva.bookai.com',
   debug: true,
   target: '#app',
+  locale: 'zh-TW',
 });

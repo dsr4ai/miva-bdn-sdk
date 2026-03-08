@@ -8,6 +8,7 @@ const mivaBDN = new MivaBDN({
   path: '/library',
   sourceId: '',
   target: '#app',
+  locale: 'zh-TW',
 });
 
 try {

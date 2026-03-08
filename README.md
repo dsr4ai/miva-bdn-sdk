@@ -32,7 +32,8 @@ After importing, you can initialize and use the SDK as follows:
 const mivaBDN = new MivaBDN({
   appId: 'your-app-id', // your Miva BDN app ID
   target: '#app',       // container selector
-  debug: true           // optional debug mode
+  debug: true,          // optional debug mode
+  locale: 'ja',         // optional locale
 });
 
 // Initializes the iframe and starts message listening
@@ -56,7 +57,8 @@ You can load a single book in the Miva BDN iframe by specifying the `path` and `
 const mivaBDN = new MivaBDN({
   appId: 'your-app-id',    // your Miva BDN app ID
   target: '#app',          // container selector
-  debug: true              // optional debug mode
+  debug: true,             // optional debug mode
+  locale: 'ja',            // optional locale
   path: '/library',        // Path inside the iframe to load the book
   sourceId: 'source-id', // ID of the book to load
 });
@@ -81,6 +83,7 @@ Property | Type | Description
 `onConfirmed` | `(data: unknown, instance: MivaBDN) => void` | Called when the iframe signals a `confirmed` event.
 `onReady` | `(data: unknown, instance: MivaBDN) => void` | Called when the iframe signals a `ready` event.
 `path` | `string` | The relative path to be appended to baseUrl when constructing the iframe URL. Should not include protocol or hostname.
+`locale` | `string` | Locale passed to the Miva application.
 `sourceId` | `string \| string[]` | The identifier(s) provided to the Miva application as content source metadata. Can be a single ID string or an array for multiple sources.
 `sourceScope` | `SourceScope` | Controls which source scopes are loaded by the Miva application. Options: `public`, `private`, `all`.
 `target` | `HTMLElement \| string` | DOM element or CSS selector where the iframe is mounted.

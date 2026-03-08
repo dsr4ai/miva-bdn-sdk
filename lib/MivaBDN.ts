@@ -67,6 +67,11 @@ export interface MivaBDNOptions {
    * MivaBDN iframe will be mounted.
    */
   target: HTMLElement | string;
+
+  /**
+   * Locale to be passed to the Miva application.
+   */
+  locale?: string;
 }
 
 /**
@@ -98,6 +103,7 @@ export default class MivaBDN {
   private origin: string = '';
   private options: MivaBDNOptions;
   private path: string = '';
+  private locale?: string;
   private sourceId: string = '';
   private sourceScope: string = '';
 
@@ -131,6 +137,7 @@ export default class MivaBDN {
     this.onReady = this.options.onReady ?? (() => {});
     this.origin = new URL(this.baseUrl).origin;
     this.path = this.options.path ?? '';
+    this.locale = this.options.locale;
     this.sourceId = this.resolveSourceId(this.options.sourceId);
     this.sourceScope = this.options.sourceScope ?? SourceScope.Public;
 
@@ -247,9 +254,18 @@ export default class MivaBDN {
     const url = new URL(this.path, this.baseUrl);
     url.searchParams.set('origin', window.location.origin);
     url.searchParams.set('appId', this.appId);
-    url.searchParams.set('debug', this.debug ? '1' : '0');
-    url.searchParams.set('sourceId', this.sourceId);
-    url.searchParams.set('sourceScope', this.sourceScope);
+    if (this.debug) {
+      url.searchParams.set('debug', String(this.debug));
+    }
+    if (this.sourceId) {
+      url.searchParams.set('sourceId', this.sourceId);
+    }
+    if (this.sourceScope) {
+      url.searchParams.set('sourceScope', this.sourceScope);
+    }
+    if (this.locale) {
+      url.searchParams.set('locale', this.locale);
+    }
 
     created.src = url.toString();
 
