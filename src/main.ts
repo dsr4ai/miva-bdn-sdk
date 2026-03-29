@@ -9,6 +9,7 @@ const mivaBDN = new MivaBDN({
   sourceId: '',
   target: '#app',
   locale: 'zh-TW',
+  enableOfficialTracking: true,
 });
 
 try {

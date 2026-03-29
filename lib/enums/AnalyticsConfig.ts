@@ -1,0 +1,23 @@
+import Origin from './Origin';
+
+const ALLOWED_ORIGINS = Object.values(Origin) as string[];
+
+const OFFICIAL_GA_TRACKING_IDS = new Map<string, string>([
+  [Origin.PROD, 'G-E0CNBLT60C'],
+  [Origin.STAGING, 'G-88RTCM5QEZ'],
+  [Origin.LOCAL, 'G-88RTCM5QEZ'],
+]);
+
+const OFFICIAL_GTM_IDS = new Map<string, string>([
+  [Origin.PROD, 'GTM-KWR4NW26'],
+  [Origin.STAGING, 'GTM-MPNLC2PN'],
+  [Origin.LOCAL, 'GTM-MPNLC2PN'],
+]);
+
+const AnalyticsConfig = {
+  ALLOWED_ORIGINS,
+  OFFICIAL_GA_TRACKING_IDS,
+  OFFICIAL_GTM_IDS,
+} as const;
+
+export default AnalyticsConfig;

@@ -1,13 +1,10 @@
 /* eslint-disable no-console */
-import { SourceScope } from './enums';
+import {
+  AnalyticsConfig,
+  Origin,
+  SourceScope,
+} from './enums';
 import MivaBDNError from './MivaBDNError';
-
-const ALLOWED_ORIGINS = [
-  'https://miva.bookai.com',
-  'https://staging.miva.bookai.com',
-  'https://dev.miva.bookai.com',
-  'http://localhost:3000',
-];
 
 /**
  * Configuration options for the MivaBDN instance.
@@ -72,6 +69,30 @@ export interface MivaBDNOptions {
    * Locale to be passed to the Miva application.
    */
   locale?: string;
+
+  /**
+   * Additional Google Analytics tracking ID(s) (e.g., 'G-XXXXXXXXXX' or 'UA-XXXXXXXXX-X').
+   * Can be a single ID string or an array for multiple IDs.
+   * The official Miva GA tracking will be automatically added based on the environment.
+   */
+  gaId?: string | string[];
+
+  /**
+   * Additional Google Tag Manager container ID(s) (e.g., 'GTM-XXXXXXX').
+   * Can be a single ID string or an array for multiple IDs.
+   * The official Miva GTM container will be automatically added based on the environment.
+   */
+  gtmId?: string | string[];
+
+  /**
+   * Controls whether to automatically send usage data to Miva's official analytics.
+   * When enabled, Miva's GA/GTM will be loaded with isolation mechanisms:
+   * - GA: Only iframe events are sent to Miva (via `send_to` parameter)
+   * - GTM: Iframe events get `miva.` prefix for namespace isolation
+   * Your page's own analytics events remain isolated and private.
+   * @default false
+   */
+  enableOfficialTracking?: boolean;
 }
 
 /**
@@ -106,6 +127,10 @@ export default class MivaBDN {
   private locale?: string;
   private sourceId: string = '';
   private sourceScope: string = '';
+  private gaIds: string[] = [];
+  private gtmIds: string[] = [];
+  private officialGaIds: string[] = [];
+  private isInitialized: boolean = false;
 
   /**
    * Creates an instance of MivaBDN.
@@ -129,6 +154,11 @@ export default class MivaBDN {
    * @throws {MivaBDNError} If required options (appId, baseUrl, target) are missing.
    */
   init() {
+    if (this.isInitialized) {
+      this.printLog('Already initialized, skipping duplicate init() call.');
+      return;
+    }
+
     this.appId = this.options.appId;
     this.baseUrl = this.resolveBaseUrl(this.options.baseUrl);
     this.debug = this.options.debug ?? false;
@@ -141,12 +171,13 @@ export default class MivaBDN {
     this.sourceId = this.resolveSourceId(this.options.sourceId);
     this.sourceScope = this.options.sourceScope ?? SourceScope.Public;
 
-    const container = this.resolveTarget(this.options.target);
+    this.initializeAnalytics();
 
-    this.iframeEl = this.createIframe(container);
+    this.iframeEl = this.createIframe(this.resolveTarget(this.options.target));
 
     window.addEventListener('message', this.messageHandler);
 
+    this.isInitialized = true;
     this.printLog('Initialized iframe and added message listener.');
   }
 
@@ -162,6 +193,7 @@ export default class MivaBDN {
     }
 
     this.iframeEl = null;
+    this.isInitialized = false;
 
     this.printLog('Destroyed iframe and removed message listener.');
   }
@@ -189,15 +221,14 @@ export default class MivaBDN {
    * @throws {MivaBDNError} If the URL is not in the list of allowed origins.
    */
   private resolveBaseUrl(url?: string): string {
-    const [PROD, STAGING, DEV] = ALLOWED_ORIGINS;
     if (!url) {
-      return PROD;
+      return Origin.PROD;
     }
     const { origin } = new URL(url);
-    if (ALLOWED_ORIGINS.includes(origin)) {
+    if (AnalyticsConfig.ALLOWED_ORIGINS.includes(origin)) {
       return url;
     }
-    throw new MivaBDNError(`Invalid baseUrl. Must be one of: ${PROD}, ${STAGING}, ${DEV}`);
+    throw new MivaBDNError(`Invalid baseUrl. Must be one of: ${Origin.PROD}, ${Origin.STAGING}, ${Origin.DEV}`);
   }
 
   /**
@@ -209,6 +240,117 @@ export default class MivaBDN {
     if (!sourceId) return '';
     if (typeof sourceId === 'string') return sourceId;
     return sourceId.join(',');
+  }
+
+  /**
+   * Initializes analytics (GA and GTM) based on configuration options.
+   * @private
+   */
+  private initializeAnalytics() {
+    const enableOfficialTracking = this.options.enableOfficialTracking ?? false;
+
+    this.initializeGoogleAnalytics(enableOfficialTracking);
+    this.initializeGoogleTagManager(enableOfficialTracking);
+  }
+
+  /**
+   * Initializes Google Analytics tracking.
+   * @param enableOfficialTracking - Whether to include official Miva tracking.
+   * @private
+   */
+  private initializeGoogleAnalytics(enableOfficialTracking: boolean) {
+    const { officialIds, userIds } = this.resolveGaIds(
+      this.baseUrl,
+      this.options.gaId,
+      enableOfficialTracking,
+    );
+
+    this.officialGaIds = officialIds;
+    this.gaIds = [...officialIds, ...userIds];
+
+    if (this.gaIds.length > 0) {
+      this.loadGoogleAnalytics(userIds, officialIds);
+    }
+  }
+
+  /**
+   * Initializes Google Tag Manager tracking.
+   * @param enableOfficialTracking - Whether to include official Miva tracking.
+   * @private
+   */
+  private initializeGoogleTagManager(enableOfficialTracking: boolean) {
+    this.gtmIds = this.resolveGtmIds(
+      this.baseUrl,
+      this.options.gtmId,
+      enableOfficialTracking,
+    );
+
+    if (this.gtmIds.length > 0) {
+      this.loadGoogleTagManager(this.gtmIds);
+    }
+  }
+
+  /**
+   * Resolves Google Analytics tracking IDs based on environment and user options.
+   * @param baseUrl - The base URL to determine the environment.
+   * @param gaId - Optional additional tracking ID(s) provided by the user.
+   * @param enableOfficialTracking - Whether to include official Miva tracking.
+   * @returns Object with separate arrays for official and user GA tracking IDs.
+   */
+  private resolveGaIds(
+    baseUrl: string,
+    gaId?: string | string[],
+    enableOfficialTracking = false,
+  ): { officialIds: string[]; userIds: string[] } {
+    const officialIds: string[] = [];
+    const userIds: string[] = [];
+
+    // Add official Miva GA tracking ID based on environment
+    if (enableOfficialTracking) {
+      const origin = new URL(baseUrl).origin;
+      const officialId = AnalyticsConfig.OFFICIAL_GA_TRACKING_IDS.get(origin);
+
+      if (officialId) {
+        officialIds.push(officialId);
+      }
+    }
+
+    // Add user-provided tracking ID(s)
+    if (gaId) {
+      const ids = Array.isArray(gaId) ? gaId : [gaId];
+      userIds.push(...ids);
+    }
+
+    return { officialIds, userIds };
+  }
+
+  /**
+   * Resolves Google Tag Manager container IDs based on environment and user options.
+   * @param baseUrl - The base URL to determine the environment.
+   * @param gtmId - Optional additional GTM container ID(s) provided by the user.
+   * @param enableOfficialTracking - Whether to include official Miva tracking.
+   * @returns An array of GTM container IDs to load.
+   */
+  private resolveGtmIds(baseUrl: string, gtmId?: string | string[], enableOfficialTracking = false): string[] {
+    const containerIds: string[] = [];
+
+    // Add official Miva GTM container ID based on environment
+    if (enableOfficialTracking) {
+      const origin = new URL(baseUrl).origin;
+      const officialId = AnalyticsConfig.OFFICIAL_GTM_IDS.get(origin);
+
+      if (officialId) {
+        containerIds.push(officialId);
+      }
+    }
+
+    // Add user-provided container ID(s)
+    if (gtmId) {
+      const userIds = Array.isArray(gtmId) ? gtmId : [gtmId];
+      containerIds.push(...userIds);
+    }
+
+    return containerIds;
   }
 
   /**
@@ -238,7 +380,7 @@ export default class MivaBDN {
    * This method first clears any existing content (like old iframes) from the
    * container to ensure a clean initialization state.
    * It then constructs the iframe `src` URL with necessary query parameters
-   * (origin, appId, debug) and appends the new iframe to the container.
+   * and appends the new iframe to the container.
    *
    * @param container - The parent element to append the iframe to.
    * @returns The newly created HTMLIFrameElement.
@@ -271,7 +413,7 @@ export default class MivaBDN {
 
     container.appendChild(created);
 
-    this.printLog(`Created iframe with src "${created.src}".`);
+    this.printLog('Created iframe.');
 
     return created;
   }
@@ -280,6 +422,7 @@ export default class MivaBDN {
    * Internal handler for `message` events from the window.
    * Filters messages to ensure they are from the correct origin.
    * Dispatches events to the appropriate user-defined callbacks (`onReady`, `onConfirmed`).
+   * Handles analytics events from iframe and forwards them to parent window's dataLayer.
    *
    * @param event - The MessageEvent object.
    * @private
@@ -295,6 +438,13 @@ export default class MivaBDN {
 
     this.printLog(`Received post message from ${origin}:`, data);
 
+    // Handle analytics events from iframe
+    if (data?.type === 'gtm_event' || data?.type === 'ga_event') {
+      this.forwardAnalyticsEvent(data);
+      return;
+    }
+
+    // Handle SDK status events
     switch (data?.status) {
       case 'ready':
         this.onReady(data, this);
@@ -308,6 +458,135 @@ export default class MivaBDN {
         // Ignore unknown message types
         break;
     }
+  }
+
+  /**
+   * Forwards analytics events from iframe to parent window's dataLayer.
+   * Automatically adds send_to for official GA tracking to prevent pollution.
+   * For GTM events, adds 'miva.' prefix to event name for namespace isolation.
+   * @param message - The message object containing analytics event data.
+   * @private
+   */
+  private forwardAnalyticsEvent(message: { type: string; data: unknown }) {
+    if (!message.data) {
+      this.printLog('Received analytics event without data, ignoring.');
+      return;
+    }
+
+    // Ensure dataLayer exists on window
+    if (typeof window !== 'undefined') {
+      (window as typeof window & { dataLayer?: unknown[] }).dataLayer = (window as typeof window & { dataLayer?: unknown[] }).dataLayer || [];
+
+      const dataLayer = (window as typeof window & { dataLayer: unknown[] }).dataLayer;
+
+      const eventData = message.data as Record<string, unknown>;
+
+      // For GA events: add send_to for official GA IDs to prevent sending to user's GA
+      if (this.officialGaIds.length > 0 && message.type === 'ga_event') {
+        eventData.send_to = this.officialGaIds;
+      }
+
+      // For GTM events: add 'miva.' prefix to event name for namespace isolation
+      if (message.type === 'gtm_event' && typeof eventData.event === 'string') {
+        eventData.event = `miva.${eventData.event}`;
+      }
+
+      dataLayer.push(eventData);
+
+      this.printLog(`Forwarded ${message.type} to parent dataLayer:`, eventData);
+    }
+  }
+
+  /**
+   * Loads the Google Analytics script dynamically with multiple tracking IDs.
+   * Official IDs are loaded but not configured to prevent pollution of user's analytics.
+   * @param userIds - User's GA tracking IDs to be configured.
+   * @param officialIds - Official Miva GA tracking IDs (loaded but not configured).
+   * @private
+   */
+  private loadGoogleAnalytics(userIds: string[], officialIds: string[]) {
+    const allIds = [...userIds, ...officialIds];
+    if (allIds.length === 0) {
+      return;
+    }
+
+    // Use the first ID for the script source
+    const primaryId = allIds[0];
+
+    // Check if GA script with this specific ID is already loaded
+    const existingScript = document.querySelector(`script[src^="https://www.googletagmanager.com/gtag/js?id=${primaryId}"]`);
+    if (existingScript) {
+      return;
+    }
+
+    // Load the GA script
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${primaryId}`;
+    document.head.appendChild(script);
+
+    // Initialize GA - only config user IDs, not official IDs
+    // Official IDs will only receive events with explicit send_to
+    const configCalls = userIds.map(id => `gtag('config', '${id}');`).join('\n      ');
+    const inlineScript = document.createElement('script');
+    inlineScript.textContent = `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      ${configCalls}
+    `;
+    document.head.appendChild(inlineScript);
+
+    this.printLog('Loaded Google Analytics with tracking IDs:', allIds);
+  }
+
+  /**
+   * Loads the Google Tag Manager script dynamically with multiple container IDs.
+   * ⚠️ WARNING: All loaded GTM containers will receive all dataLayer events.
+   * Users must configure triggers to exclude 'miva.*' events to prevent pollution.
+   * Events from iframe are automatically prefixed with 'miva.' for isolation.
+   * @param containerIds - Array of GTM container IDs.
+   * @private
+   */
+  private loadGoogleTagManager(containerIds: string[]) {
+    if (containerIds.length === 0) {
+      return;
+    }
+
+    // Initialize dataLayer first (must exist before GTM scripts load)
+    if (typeof window !== 'undefined') {
+      (window as typeof window & { dataLayer?: unknown[] }).dataLayer
+        = (window as typeof window & { dataLayer?: unknown[] }).dataLayer || [];
+    }
+
+    containerIds.forEach((containerId) => {
+      // Check if this GTM container is already loaded (check for exact ID match at start of URL)
+      const existingScript = document.querySelector(`script[src^="https://www.googletagmanager.com/gtm.js?id=${containerId}"]`);
+      if (existingScript) {
+        return;
+      }
+
+      // Push GTM initialization event to dataLayer before loading script
+      const dataLayer = (window as typeof window & { dataLayer: unknown[] }).dataLayer;
+      dataLayer.push({
+        'gtm.start': new Date().getTime(),
+        'event': 'gtm.js',
+      });
+
+      // Load GTM script after dataLayer is initialized
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = `https://www.googletagmanager.com/gtm.js?id=${containerId}`;
+
+      // Add error event listener
+      script.onerror = (error) => {
+        this.printLog(`Failed to load GTM script: ${containerId}`, error);
+      };
+
+      document.head.appendChild(script);
+    });
+
+    this.printLog(`Loaded Google Tag Manager with container IDs: ${containerIds.join(', ')}`);
   }
 
   private printLog(message: string, ...args: unknown[]) {
