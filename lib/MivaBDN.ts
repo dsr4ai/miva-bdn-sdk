@@ -2,7 +2,6 @@
 import {
   AnalyticsConfig,
   Origin,
-  SourceScope,
 } from './enums';
 import MivaBDNError from './MivaBDNError';
 
@@ -51,13 +50,6 @@ export interface MivaBDNOptions {
    * Can be a single ID string or an array for multiple sources.
    */
   sourceId?: string | string[];
-
-  /**
-   * Controls which source scopes are loaded by the Miva application.
-   *
-   * @default SourceScope.Public
-   */
-  sourceScope?: SourceScope;
 
   /**
    * The DOM element or CSS selector string identifying where the
@@ -110,7 +102,6 @@ export default class MivaBDN {
   private path: string = '';
   private locale?: string;
   private sourceId: string = '';
-  private sourceScope: string = '';
   private gtmIds: string[] = [];
   private isInitialized: boolean = false;
 
@@ -151,7 +142,6 @@ export default class MivaBDN {
     this.path = this.options.path ?? '';
     this.locale = this.options.locale;
     this.sourceId = this.resolveSourceId(this.options.sourceId);
-    this.sourceScope = this.options.sourceScope ?? SourceScope.Public;
 
     this.initializeAnalytics();
 
@@ -290,9 +280,6 @@ export default class MivaBDN {
     }
     if (this.sourceId) {
       url.searchParams.set('sourceId', this.sourceId);
-    }
-    if (this.sourceScope) {
-      url.searchParams.set('sourceScope', this.sourceScope);
     }
     if (this.locale) {
       url.searchParams.set('locale', this.locale);

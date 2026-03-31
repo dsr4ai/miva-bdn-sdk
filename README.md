@@ -123,7 +123,6 @@ Property | Type | Description
 `onReady` | `(data: unknown, instance: MivaBDN) => void` | Called when the iframe signals a `ready` event.
 `path` | `string` | The relative path to be appended to baseUrl when constructing the iframe URL. Should not include protocol or hostname.
 `sourceId` | `string \| string[]` | The identifier(s) provided to the Miva application as content source metadata. Can be a single ID string or an array for multiple sources.
-`sourceScope` | `SourceScope` | Controls which source scopes are loaded by the Miva application. Options: `public`, `private`, `all`.
 `target` | `HTMLElement \| string` | DOM element or CSS selector where the iframe is mounted.
 
 ### Methods
