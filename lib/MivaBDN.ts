@@ -134,12 +134,9 @@ export default class MivaBDN {
    * @param options - The configuration options for this instance.
    */
   constructor(options: MivaBDNOptions) {
-    if (!options.appId) {
-      throw new MivaBDNError('appId is required for initialization.');
-    }
-    if (!options.target) {
-      throw new MivaBDNError('target is required for initialization.');
-    }
+    // The constructor only stores configuration. All validation and setup
+    // happens in init(), so callers have a single place — init() — to catch
+    // synchronous setup errors.
     this.options = options;
   }
 
@@ -154,6 +151,13 @@ export default class MivaBDN {
     if (this.isInitialized) {
       this.printLog('Already initialized, skipping duplicate init() call.');
       return;
+    }
+
+    if (!this.options.appId) {
+      throw new MivaBDNError('appId is required for initialization.', 'missing_app_id');
+    }
+    if (!this.options.target) {
+      throw new MivaBDNError('target is required for initialization.', 'missing_target');
     }
 
     this.appId = this.options.appId;
@@ -204,7 +208,7 @@ export default class MivaBDN {
    */
   postMessage(payload: unknown) {
     if (!this.iframeEl || !this.iframeEl.contentWindow) {
-      throw new MivaBDNError('Failed to post message. Iframe is not available.');
+      throw new MivaBDNError('Failed to post message. Iframe is not available.', 'iframe_unavailable');
     }
 
     this.iframeEl.contentWindow.postMessage(payload, this.origin);
@@ -226,7 +230,7 @@ export default class MivaBDN {
     if (AnalyticsConfig.ALLOWED_ORIGINS.includes(origin)) {
       return url;
     }
-    throw new MivaBDNError(`Invalid baseUrl. Must be one of: ${Origin.PROD}, ${Origin.STAGING}, ${Origin.DEV}`);
+    throw new MivaBDNError(`Invalid baseUrl. Must be one of: ${Origin.PROD}, ${Origin.STAGING}, ${Origin.DEV}`, 'invalid_base_url');
   }
 
   /**
@@ -272,11 +276,11 @@ export default class MivaBDN {
     if (typeof target === 'string') {
       const container = document.querySelector(target);
       if (!container) {
-        throw new MivaBDNError(`Target element "${target}" not found.`);
+        throw new MivaBDNError(`Target element "${target}" not found.`, 'target_not_found');
       }
       return container as HTMLElement;
     }
-    throw new MivaBDNError('Invalid target specified. Must be an HTMLElement or a selector.');
+    throw new MivaBDNError('Invalid target specified. Must be an HTMLElement or a selector.', 'invalid_target');
   }
 
   /**

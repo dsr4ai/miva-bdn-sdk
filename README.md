@@ -167,7 +167,17 @@ Property | Type | Description
 
 ## Error Handling
 
-All critical errors, such as missing required options or invalid targets, are thrown as instances of `MivaBDNError`.
+Setup errors — such as missing required options or an invalid target — are thrown synchronously from `init()` (not the constructor), so a single `try/catch` around `init()` covers them:
+
+```js
+try {
+  new MivaBDN({ appId, target }).init();
+} catch (error) {
+  // error is a MivaBDNError; check error.code (e.g. 'missing_app_id').
+}
+```
+
+Runtime errors reported by the embedded application (e.g. SSO failures) are delivered asynchronously to [`onError`](#single-sign-on-sso). Both channels deliver a `MivaBDNError` carrying an optional `code`.
 
 ## Security
 
