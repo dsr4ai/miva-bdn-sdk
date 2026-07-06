@@ -121,6 +121,7 @@ export default class MivaBDN {
   private onError: (error: MivaBDNError, instance: MivaBDN) => void = () => {};
   private onReady: (data: unknown, instance: MivaBDN) => void = () => {};
   private token?: string;
+  private tokenSent: boolean = false;
   private origin: string = '';
   private options: MivaBDNOptions;
   private path: string = '';
@@ -352,15 +353,23 @@ export default class MivaBDN {
 
     // Handle SDK status events
     switch (data?.status) {
-      case 'ready':
+      case 'ready': {
         this.onReady(data, this);
         // Acknowledge readiness to the iframe, delivering the SSO token (if any)
         // over the same trusted channel so it never appears in the iframe URL.
+        // Send the token only in the FIRST acknowledgement: re-sending it on a
+        // later handshake (iframe re-mount, duplicate 'ready') would replay a
+        // single-use token and fail. A fresh page load makes a new instance.
+        const includeToken = !!this.token && !this.tokenSent;
         this.postMessage({
           status: 'acknowledged',
-          ...(this.token ? { token: this.token } : {}),
+          ...(includeToken ? { token: this.token } : {}),
         });
+        if (includeToken) {
+          this.tokenSent = true;
+        }
         break;
+      }
       case 'confirmed':
         this.onConfirmed(data, this);
         break;
