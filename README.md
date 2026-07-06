@@ -67,6 +67,36 @@ const mivaBDN = new MivaBDN({
 mivaBDN.init();
 ```
 
+## Single Sign-On (SSO)
+
+If your users are already authenticated in your own system, you can sign them
+into the embedded Miva application automatically by passing a partner-signed
+`token`. When a `token` is present the app skips anonymous sign-in and exchanges
+the token for a session.
+
+```js
+const mivaBDN = new MivaBDN({
+  appId: 'your-app-id',
+  target: '#app',
+  token: '<signed-jwt-from-your-backend>', // short-lived, single-use RS256 JWT
+  onError: (error) => {
+    // Fired if the token is expired, replayed, or invalid.
+    // `error` is a MivaBDNError; check `error.code` for the reason.
+    console.error('Miva SSO failed:', error.code, error.message);
+  },
+});
+
+mivaBDN.init();
+```
+
+Notes:
+
+- The `token` is delivered to the iframe over `postMessage`; it is never placed
+  in the iframe URL.
+- Generate the token on your **backend** and keep it short-lived (a few minutes)
+  and single-use. Contact Miva to register your issuer's public key and receive
+  your `appId` and the expected `aud` value.
+
 ## Analytics Tracking
 
 ### Default Behavior
@@ -120,10 +150,12 @@ Property | Type | Description
 `enableOfficialTracking` | `boolean` | Controls whether to send usage data to Miva's official GTM. Only iframe events are sent to Miva (with `miva.` prefix isolation). Your page's events stay private. Default: `false`.
 `locale` | `string` | Locale passed to the Miva application.
 `onConfirmed` | `(data: unknown, instance: MivaBDN) => void` | Called when the iframe signals a `confirmed` event.
+`onError` | `(error: MivaBDNError, instance: MivaBDN) => void` | Called when the iframe signals an `error` event (e.g. an expired, replayed, or invalid SSO `token`). Receives a `MivaBDNError`; inspect `error.code` for the reason.
 `onReady` | `(data: unknown, instance: MivaBDN) => void` | Called when the iframe signals a `ready` event.
 `path` | `string` | The relative path to be appended to baseUrl when constructing the iframe URL. Should not include protocol or hostname.
 `sourceId` | `string \| string[]` | The identifier(s) provided to the Miva application as content source metadata. Can be a single ID string or an array for multiple sources.
 `target` | `HTMLElement \| string` | DOM element or CSS selector where the iframe is mounted.
+`token` | `string` | A partner-signed SSO token (JWT). When provided, the embedded app exchanges it for a session instead of signing in anonymously. Delivered to the iframe over `postMessage` (never placed in the URL). See [Single Sign-On](#single-sign-on-sso).
 
 ### Methods
 

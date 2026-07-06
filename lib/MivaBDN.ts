@@ -15,6 +15,16 @@ export interface MivaBDNOptions {
   appId: string;
 
   /**
+   * A partner-signed SSO token (JWT) that authenticates the current user.
+   *
+   * When provided, the embedded Miva application exchanges this token for a
+   * session instead of signing in anonymously. The token is delivered to the
+   * iframe over `postMessage` (never placed in the iframe URL). Generate it
+   * short-lived and single-use on your backend.
+   */
+  token?: string;
+
+  /**
    * The base URL for the MivaBDN application to be loaded in the iframe.
    */
   baseUrl?: string;
@@ -38,6 +48,18 @@ export interface MivaBDNOptions {
    * @param instance - The MivaBDN class instance.
    */
   onReady?: (data: unknown, instance: MivaBDN) => void;
+
+  /**
+   * Callback function triggered when the iframe application signals an `error`
+   * event, e.g. an SSO token that is expired, replayed, or invalid.
+   *
+   * Receives a {@link MivaBDNError} — the same error type thrown synchronously
+   * for setup errors — so both error channels share one shape. Inspect
+   * `error.code` for the machine-readable reason.
+   * @param error - The normalized error.
+   * @param instance - The MivaBDN class instance.
+   */
+  onError?: (error: MivaBDNError, instance: MivaBDN) => void;
 
   /**
    * The relative path to be appended to `baseUrl` when constructing the iframe URL.
@@ -96,7 +118,9 @@ export default class MivaBDN {
   private iframeEl: HTMLIFrameElement | null = null;
   private messageHandler: (ev: MessageEvent) => void = () => {};
   private onConfirmed: (data: unknown, instance: MivaBDN) => void = () => {};
+  private onError: (error: MivaBDNError, instance: MivaBDN) => void = () => {};
   private onReady: (data: unknown, instance: MivaBDN) => void = () => {};
+  private token?: string;
   private origin: string = '';
   private options: MivaBDNOptions;
   private path: string = '';
@@ -137,7 +161,9 @@ export default class MivaBDN {
     this.debug = this.options.debug ?? false;
     this.messageHandler = this.handleMessage.bind(this);
     this.onConfirmed = this.options.onConfirmed ?? (() => {});
+    this.onError = this.options.onError ?? (() => {});
     this.onReady = this.options.onReady ?? (() => {});
+    this.token = this.options.token;
     this.origin = new URL(this.baseUrl).origin;
     this.path = this.options.path ?? '';
     this.locale = this.options.locale;
@@ -324,12 +350,24 @@ export default class MivaBDN {
     switch (data?.status) {
       case 'ready':
         this.onReady(data, this);
-        // Acknowledge readiness to the iframe
-        this.postMessage({ status: 'acknowledged' });
+        // Acknowledge readiness to the iframe, delivering the SSO token (if any)
+        // over the same trusted channel so it never appears in the iframe URL.
+        this.postMessage({
+          status: 'acknowledged',
+          ...(this.token ? { token: this.token } : {}),
+        });
         break;
       case 'confirmed':
         this.onConfirmed(data, this);
         break;
+      case 'error': {
+        // Normalize the iframe's error payload into a MivaBDNError so both the
+        // async (onError) and sync (throw) channels deliver the same type.
+        const message = typeof data?.message === 'string' ? data.message : 'Miva application error.';
+        const code = typeof data?.code === 'string' ? data.code : undefined;
+        this.onError(new MivaBDNError(message, code), this);
+        break;
+      }
       default:
         // Ignore unknown message types
         break;
