@@ -318,6 +318,16 @@ export default class MivaBDN {
 
     created.src = url.toString();
 
+    // Grant the embedded app the features it needs across the cross-origin
+    // frame boundary:
+    //   - autoplay: Chrome blocks Web Audio (AudioContext) output in a
+    //     cross-origin iframe unless the frame may autoplay, even after a user
+    //     gesture, so without it read-aloud / TTS narration stays silent while
+    //     other media (e.g. voice previews) still play.
+    //   - microphone: voice mode's hold-to-talk dictation calls getUserMedia,
+    //     which a cross-origin iframe is denied unless microphone is delegated.
+    created.allow = 'autoplay; microphone';
+
     container.appendChild(created);
 
     this.printLog('Created iframe.');

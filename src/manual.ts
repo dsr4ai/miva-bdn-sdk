@@ -30,6 +30,7 @@ const initMivaBDN = ({
 
   const iframe = document.createElement('iframe');
   iframe.src = url.toString();
+  iframe.allow = 'autoplay; microphone';
 
   container.innerHTML = '';
   container.appendChild(iframe);
