@@ -37,6 +37,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/dsr4ai/miva-bdn-sdk"
+    "url": "git+https://github.com/dsr4ai/miva-bdn-sdk.git"
   }
 }
