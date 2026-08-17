@@ -85,6 +85,12 @@ export interface MivaBDNOptions {
   locale?: string;
 
   /**
+   * ISO 3166 country code passed to the Miva application to preview a
+   * specific curation region, overriding its geo-based detection.
+   */
+  region?: string;
+
+  /**
    * Controls whether to automatically send usage data to Miva's official analytics (GTM).
    * When enabled, Miva's GTM will be loaded and iframe events get `miva.` prefix for namespace isolation.
    * Your page's own analytics events remain isolated and private.
@@ -126,6 +132,7 @@ export default class MivaBDN {
   private options: MivaBDNOptions;
   private path: string = '';
   private locale?: string;
+  private region?: string;
   private sourceId: string = '';
   private gtmIds: string[] = [];
   private isInitialized: boolean = false;
@@ -172,6 +179,7 @@ export default class MivaBDN {
     this.origin = new URL(this.baseUrl).origin;
     this.path = this.options.path ?? '';
     this.locale = this.options.locale;
+    this.region = this.options.region;
     this.sourceId = this.resolveSourceId(this.options.sourceId);
 
     this.initializeAnalytics();
@@ -314,6 +322,9 @@ export default class MivaBDN {
     }
     if (this.locale) {
       url.searchParams.set('locale', this.locale);
+    }
+    if (this.region) {
+      url.searchParams.set('region', this.region);
     }
 
     created.src = url.toString();

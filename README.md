@@ -153,6 +153,7 @@ Property | Type | Description
 `onError` | `(error: MivaBDNError, instance: MivaBDN) => void` | Called when the iframe signals an `error` event (e.g. an expired, replayed, or invalid SSO `token`). Receives a `MivaBDNError`; inspect `error.code` for the reason.
 `onReady` | `(data: unknown, instance: MivaBDN) => void` | Called when the iframe signals a `ready` event.
 `path` | `string` | The relative path to be appended to baseUrl when constructing the iframe URL. Should not include protocol or hostname.
+`region` | `string` | ISO 3166 country code overriding the Miva application's geo-detected curation region (e.g. for previews).
 `sourceId` | `string \| string[]` | The identifier(s) provided to the Miva application as content source metadata. Can be a single ID string or an array for multiple sources.
 `target` | `HTMLElement \| string` | DOM element or CSS selector where the iframe is mounted.
 `token` | `string` | A partner-signed SSO token (JWT). When provided, the embedded app exchanges it for a session instead of signing in anonymously. Delivered to the iframe over `postMessage` (never placed in the URL). See [Single Sign-On](#single-sign-on-sso).
